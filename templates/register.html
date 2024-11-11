@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - SJSU Library</title>
+</head>
+<body>
+    <h1>Register</h1>
+    <form method="post">
+        Username: <input type="text" name="username" required><br>
+        Password: <input type="password" name="password" required><br>
+        Role: <select name="role">
+            <option value="student">Student</option>
+            <option value="librarian">Librarian</option>
+            <option value="admin">Admin</option>
+        </select><br>
+        <input type="submit" value="Register">
+    </form>
+    <a href="/login">Already have an account? Login here</a>
+</body>
+</html>
