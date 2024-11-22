@@ -4,19 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - SJSU Library</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='common_styles.css') }}">
 </head>
 <body>
-    <h1>Register</h1>
-    <form method="post">
-        Username: <input type="text" name="username" required><br>
-        Password: <input type="password" name="password" required><br>
-        Role: <select name="role">
-            <option value="student">Student</option>
-            <option value="librarian">Librarian</option>
-            <option value="admin">Admin</option>
-        </select><br>
-        <input type="submit" value="Register">
-    </form>
-    <a href="/login">Already have an account? Login here</a>
+    <header>Register - SJSU Library</header>
+    <div class="container">
+        <form method="post" action="{{ url_for('register') }}">
+            <label for="username">Username:</label>
+            <input type="text" name="username" id="username" required><br>
+
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password" required><br>
+
+            <label for="role">Role:</label>
+            <select name="role" id="role" required onchange="toggleStudentFields()">
+                <option value="student">Student</option>
+                <option value="librarian">Librarian</option>
+                <option value="admin">Admin</option>
+            </select><br>
+
+            <!-- Student specific fields -->
+            <div id="student-fields" style="display:none;">
+                <label for="name">Full Name:</label>
+                <input type="text" name="name" id="name"><br>
+
+                <label for="student_id">Student ID:</label>
+                <input type="text" name="student_id" id="student_id"><br>
+            </div>
+
+            <input type="submit" value="Register">
+        </form>
+        <a href="/login">Already have an account? Login here</a>
+    </div>
+
+    <script>
+        function toggleStudentFields() {
+            const roleSelect = document.getElementById('role');
+            const studentFields = document.getElementById('student-fields');
+            if (roleSelect.value === 'student') {
+                studentFields.style.display = 'block';
+            } else {
+                studentFields.style.display = 'none';
+            }
+        }
+
+        // Automatically call the function to check the default state on load
+        window.onload = toggleStudentFields;
+    </script>
 </body>
 </html>

@@ -1,1 +1,31 @@
-[]
+{
+    "users": [
+        {
+            "username": "aditya",
+            "password": "scrypt:32768:8:1$qyFHJskWbRirlEHp$1e5145f3817b7a15052843d68b33d2b68fc0cd763d93bfb0c1ac2ba6b7e3972f06d03b22004a54a3542a8e3438eebaddcd21fb07903a26365f30f49f850d07f4",
+            "role": "student"
+        },
+        {
+            "username": "librarian",
+            "password": "scrypt:32768:8:1$S88jqBPD4w9tWKbC$64ca8bbcaa3077cf7ee395ab3f2cce92ae4a431f24af35cc0540620191b01ee47c85976fd95050903dcd474155f60e47b6397b3ed2638e2c89a15cb4a9c257f5",
+            "role": "librarian"
+        },
+        {
+            "username": "faculty",
+            "password": "scrypt:32768:8:1$gYJLucbbxE6gT6H8$b8f6c7cd65c56d1a01960a9f1f1011015d2ba148cca0805526d4396603b999a1e0078c812f850c9da38058522323d607a5c6178ae2ccc39475ad440c426b851d",
+            "role": "admin"
+        },
+        {
+            "username": "aaaaa",
+            "password": "scrypt:32768:8:1$p6TEWkJ0qFix6seS$187d1022e51f2121ba89b2375144cc69c8681800b74792a38824c529aea35f23eb1b78e944492ad33a841b5836dca59c6a6db5f36c694a7d54eaae4321130832",
+            "role": "admin"
+        },
+        {
+            "username": "admin ",
+            "password": "scrypt:32768:8:1$MuiN5AFcNE3QFEW7$1107ebeb0fb9fda13f4dec696975511b669bed7116dd8f4f265710bab760fdd806c83d5f49a83f01b9ccfd02f92def407115d35f8fab644e70c0c28903ad1464",
+            "role": "admin"
+        }
+    ],
+    "books": [],
+    "borrow_records": []
+}

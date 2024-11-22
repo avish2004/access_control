@@ -1,20 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='common_styles.css') }}">
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - SJSU Library</title>
+    <title>Register - SJSU Library</title>
 </head>
 <body>
-    <h1>Welcome, {{ username }} (Role: {{ role }})</h1>
-    <a href="/logout">Logout</a>
+    <h1>Register</h1>
+    <form method="post" action="{{ url_for('register') }}">
+        Username: <input type="text" name="username" required><br>
+        Password: <input type="password" name="password" required><br>
+        Role: <select name="role" id="role" onchange="toggleStudentFields()">
+            <option value="student">Student</option>
+            <option value="librarian">Librarian</option>
+            <option value="faculty">Faculty</option>
+        </select><br>
+        <div id="studentFields" style="display:none;">
+            Name: <input type="text" name="name" required><br>
+            Student ID: <input type="text" name="student_id" required><br>
+        </div>
+        <input type="submit" value="Register">
+    </form>
+    <a href="/login">Already have an account? Login here</a>
 
-    {% if role == 'admin' %}
-        <h2>Deprovision User</h2>
-        <form method="post" action="/deprovision">
-            Username to delete: <input type="text" name="username" required><br>
-            <input type="submit" value="Delete User">
-        </form>
-    {% endif %}
+    <script>
+    function toggleStudentFields() {
+        var role = document.getElementById("role").value;
+        var studentFields = document.getElementById("studentFields");
+        if (role === "student") {
+            studentFields.style.display = "block";
+        } else {
+            studentFields.style.display = "none";
+        }
+    }
+    window.onload = toggleStudentFields;  // Ensures correct fields are shown when page loads
+    </script>
 </body>
 </html>

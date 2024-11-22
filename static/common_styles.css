@@ -1,0 +1,130 @@
+/* Common CSS for SJSU Library Website - Updated to resemble SJSU Library page */
+
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background-color: #ffffff;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    color: #00274d;
+}
+
+header {
+    background-color: #00274d;
+    color: #fff;
+    padding: 1rem;
+    width: 100%;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+form {
+    background-color: #f9f9f9;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 100%;
+    margin: 1rem;
+    border: 1px solid #e0e0e0;
+}
+
+input[type="text"], input[type="password"], select {
+    width: 100%;
+    padding: 0.75rem;
+    margin: 0.75rem 0;
+    border: 1px solid #d1d1d1;
+    border-radius: 4px;
+}
+
+input[type="submit"], button {
+    background-color: #0072ce;
+    color: #fff;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    font-weight: bold;
+}
+
+input[type="submit"]:hover, button:hover {
+    background-color: #005bb5;
+}
+
+a {
+    color: #0072ce;
+    text-decoration: none;
+    margin-top: 1rem;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 2rem auto;
+}
+
+h1, h2 {
+    color: #00274d;
+    text-align: center;
+    font-weight: bold;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    margin: 0.75rem 0;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #0072ce;
+}
+
+.footer {
+    background-color: #00274d;
+    color: #fff;
+    padding: 1rem;
+    width: 100%;
+    text-align: center;
+    position: fixed;
+    bottom: 0;
+    font-size: 0.875rem;
+}
+
+nav {
+    background-color: #004990;
+    width: 100%;
+    padding: 0.75rem;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+nav a {
+    color: #ffffff;
+    font-weight: bold;
+    text-decoration: none;
+    padding: 0.5rem;
+}
+
+nav a:hover {
+    background-color: #003366;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
