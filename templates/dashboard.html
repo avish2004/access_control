@@ -1,41 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='common_styles.css') }}">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - SJSU Library</title>
+    <title>Library Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Register</h1>
-    <form method="post" action="{{ url_for('register') }}">
-        Username: <input type="text" name="username" required><br>
-        Password: <input type="password" name="password" required><br>
-        Role: <select name="role" id="role" onchange="toggleStudentFields()">
-            <option value="student">Student</option>
-            <option value="librarian">Librarian</option>
-            <option value="faculty">Faculty</option>
-        </select><br>
-        <div id="studentFields" style="display:none;">
-            Name: <input type="text" name="name" required><br>
-            Student ID: <input type="text" name="student_id" required><br>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Library Dashboard</a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
         </div>
-        <input type="submit" value="Register">
-    </form>
-    <a href="/login">Already have an account? Login here</a>
+    </nav>
 
-    <script>
-    function toggleStudentFields() {
-        var role = document.getElementById("role").value;
-        var studentFields = document.getElementById("studentFields");
-        if (role === "student") {
-            studentFields.style.display = "block";
-        } else {
-            studentFields.style.display = "none";
-        }
-    }
-    window.onload = toggleStudentFields;  // Ensures correct fields are shown when page loads
-    </script>
+    <div class="container mt-5">
+        <h1 class="text-center">Welcome, {{ username }}!</h1>
+        <h3 class="text-center">Role: {{ role }}</h3>
+
+        <div class="row mt-4">
+            <!-- Common Features -->
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Search Catalog</h5>
+                        <p class="card-text">Browse the library's collection of books and resources.</p>
+                        <a href="/search" class="btn btn-primary">Search Books</a>
+                    </div>
+                </div>
+            </div>
+
+            {% if can_borrow_books %}
+            <!-- Student Features -->
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Borrow Books</h5>
+                        <p class="card-text">View available books and borrow them.</p>
+                        <a href="/checkout" class="btn btn-success">View Available Books</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_manage_inventory %}
+            <!-- Librarian Features -->
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Inventory</h5>
+                        <p class="card-text">Add, update, or remove books in the library catalog.</p>
+                        <a href="/inventory" class="btn btn-warning">Manage Inventory</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if approve %}
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Approve pending members</h5>
+                        <p class="card-text">Approve/Reject newly registered members</p>
+                        <a href="/approve" class="btn btn-secondary">View Members</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if can_manage_members %}
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Manage Members</h5>
+                        <p class="card-text">Manage current members.</p>
+                        <a href="/manage_members" class="btn btn-info">Manage Members</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_view_members %}
+            <!-- Faculty Features -->
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">View Member Data</h5>
+                        <p class="card-text">View detailed information about library members.</p>
+                        <a href="/view_members" class="btn btn-secondary">View Members</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Book List -->
+        <div class="mt-5">
+            <h3>Available Books</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                    <tr>
+                        <td>{{ book.title }}</td>
+                        <td>{{ book.author }}</td>
+                        <td>{{ book.location }}</td>
+                        <td>
+                            {% if book.available %}
+                                Available
+                            {% else %}
+                                Borrowed
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

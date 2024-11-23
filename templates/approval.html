@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='common_styles.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approve Members</title>
+</head>
+<body>
+    <h1>Approve New Members</h1>
+        <ul>
+            {% for users in user %} 
+                <li>
+                    Username: {{ users.username }} 
+                    <div>Role: {{ users.role }}</div>
+                    <div>Status: 
+                        {% if users.pending == False%}
+                        <form method="POST action=">
+                            <input type="hidden" name="user" value="{{ user.username}}"> 
+                            <button type="submit">Approve</button>
+                        {% else %}
+                        Account is approved
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+</body>
+</html>
+

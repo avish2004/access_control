@@ -15,11 +15,12 @@ db = SQLAlchemy(app)
 # Database Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
+    username = db.Column(db.String(150),unique=True, nullable=False)
     password = db.Column(db.Text, nullable=False)
     role = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(150), nullable=True)
     student_id = db.Column(db.String(50), nullable=True)
+    pending = db.Column(db.Boolean, default = True)  
 
 class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -59,6 +60,7 @@ def role_required(roles):
 def home():
     return render_template('index.html')  # Rendered with index.html template
 
+#User registration, once member has registered, POST request gets sent to libriarian for approval
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -80,9 +82,12 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
+        return 'Registration submitted for approval'
         return redirect(url_for('login'))
     return render_template('register.html')  # Rendered with updated register.html template
 
+
+#User login, if login request is succesful, routes user to dashboard
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -90,17 +95,20 @@ def login():
         password = request.form['password']
 
         user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password, password):
+        if user and check_password_hash(user.password, password) and user.pending == 1:
             session['username'] = username
             session['role'] = user.role
 
             # Redirect to dashboard after successful login
             return redirect(url_for('dashboard'))
+        elif user.pending == 0:
+            return 'Account has not been verfied by the librarian'
         else:
             return 'Invalid credentials!'
 
     return render_template('login.html')  # Rendered with updated login.html template
 
+#Dashboard that contains list of actions users can do depending on their permissions 
 @app.route('/dashboard')
 def dashboard():
     if 'username' not in session:
@@ -111,10 +119,11 @@ def dashboard():
     
     # Define feature access based on role
     can_borrow_books = role == 'student'
-    can_manage_inventory = role == 'librarian'
+    can_manage_inventory = role == 'librarian','faculty'
     can_manage_members = role == 'librarian'
     can_view_members = role == 'faculty'
-
+    can_issue_fines = role == 'faculty'
+    approve = role == 'librarian'
     return render_template('dashboard.html', 
                            username=session['username'], 
                            role=role, 
@@ -122,7 +131,8 @@ def dashboard():
                            can_borrow_books=can_borrow_books,
                            can_manage_inventory=can_manage_inventory,
                            can_manage_members=can_manage_members,
-                           can_view_members=can_view_members)  # Rendered with updated dashboard.html template
+                           can_view_members=can_view_members,
+                           approve = approve)  # Rendered with updated dashboard.html template
 
 # Search Catalog - Available to All
 @app.route('/search')
@@ -142,9 +152,10 @@ def borrow(book_id):
         new_borrow_record = BorrowRecord(user_id=user.id, book_id=book.id)
         db.session.add(new_borrow_record)
         db.session.commit()
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('checkout'))
 
     return 'Book not available!'
+    return render_template('checkout.html', books=books)  # Rendered with updated inventory.html template
 
 # Return Book - Only for Students
 @app.route('/return/<int:book_id>', methods=['POST'])
@@ -204,6 +215,23 @@ def manage_members():
 
     users = User.query.all()
     return render_template('members.html', users=users)  # Rendered with updated members.html template
+#Approve new members - only for librarians
+
+#It gives key error when I try to approve (brain blew up)
+@app.route('/approve', methods=['GET', 'POST'])
+@role_required(['librarian'])
+def approve():
+    if request.method == 'POST':
+        user_to_approve = request.form['username']  # Get the username from the form
+        user = User.query.filter_by(username=user_to_approve).first()  # Query by the username
+        if user:
+            user.pending = True  # Set 'pending' to True when approved
+            db.session.commit()  # Commit the change to the database
+        return redirect(url_for('approve'))  # Redirect to reload the page
+
+    users = User.query.all()
+    return render_template('approval.html', user=users) 
+
 
 # View Member Data - Only for Faculty
 @app.route('/view_members', methods=['GET'])
