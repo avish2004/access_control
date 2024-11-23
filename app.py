@@ -75,17 +75,17 @@ def register():
         if User.query.filter_by(username=username).first():
             return 'User already exists!'
 
+        # Set pending status to False for librarians and admins
         if role == 'student':
-            new_user = User(username=username, password=hashed_password, role=role, name=name, student_id=student_id)
+            new_user = User(username=username, password=hashed_password, role=role, name=name, student_id=student_id, pending=True)
         else:
-            new_user = User(username=username, password=hashed_password, role=role, name=name)
+            new_user = User(username=username, password=hashed_password, role=role, name=name, pending=False)
+        
         db.session.add(new_user)
         db.session.commit()
 
-        return 'Registration submitted for approval'
-        return redirect(url_for('login'))
-    return render_template('register.html')  # Rendered with updated register.html template
-
+        return 'Registration successful. Please wait for approval if required.'
+    return render_template('register.html')
 
 #User login, if login request is succesful, routes user to dashboard
 @app.route('/login', methods=['GET', 'POST'])
@@ -95,20 +95,27 @@ def login():
         password = request.form['password']
 
         user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password, password) and user.pending == 1:
-            session['username'] = username
-            session['role'] = user.role
 
-            # Redirect to dashboard after successful login
-            return redirect(url_for('dashboard'))
-        elif user.pending == 0:
-            return 'Account has not been verfied by the librarian'
-        else:
-            return 'Invalid credentials!'
+        if not user:
+            return 'Invalid credentials!'  # User does not exist
+
+        # If user exists, check password
+        if not check_password_hash(user.password, password):
+            return 'Invalid credentials!'  # Incorrect password
+
+        # Check if the account is still pending approval
+        if user.pending:
+            return 'Account has not been verified by the librarian.'
+
+        # Successful login
+        session['username'] = username
+        session['role'] = user.role
+        return redirect(url_for('dashboard'))
 
     return render_template('login.html')  # Rendered with updated login.html template
 
-#Dashboard that contains list of actions users can do depending on their permissions 
+
+# Dashboard that contains list of actions users can do depending on their permissions 
 @app.route('/dashboard')
 def dashboard():
     if 'username' not in session:
@@ -119,11 +126,12 @@ def dashboard():
     
     # Define feature access based on role
     can_borrow_books = role == 'student'
-    can_manage_inventory = role == 'librarian','faculty'
+    can_manage_inventory = role in ['librarian', 'faculty']
     can_manage_members = role == 'librarian'
-    can_view_members = role == 'faculty'
-    can_issue_fines = role == 'faculty'
+    can_view_members = role in ['faculty', 'librarian']
+    can_issue_fines = role in ['faculty', 'librarian']
     approve = role == 'librarian'
+
     return render_template('dashboard.html', 
                            username=session['username'], 
                            role=role, 
@@ -132,7 +140,9 @@ def dashboard():
                            can_manage_inventory=can_manage_inventory,
                            can_manage_members=can_manage_members,
                            can_view_members=can_view_members,
-                           approve = approve)  # Rendered with updated dashboard.html template
+                           can_issue_fines=can_issue_fines,
+                           approve=approve)  # Rendered with updated dashboard.html template
+
 
 # Search Catalog - Available to All
 @app.route('/search')
@@ -222,16 +232,21 @@ def manage_members():
 @role_required(['librarian'])
 def approve():
     if request.method == 'POST':
-        user_to_approve = request.form['username']  # Get the username from the form
-        user = User.query.filter_by(username=user_to_approve).first()  # Query by the username
+        username = request.form['username']
+        action = request.form['action']  # 'approve' or 'reject'
+        user = User.query.filter_by(username=username, pending=True).first()
+        
         if user:
-            user.pending = True  # Set 'pending' to True when approved
-            db.session.commit()  # Commit the change to the database
-        return redirect(url_for('approve'))  # Redirect to reload the page
+            if action == 'approve':
+                user.pending = False  # Set 'pending' to False when approved
+            elif action == 'reject':
+                db.session.delete(user)  # Delete user if rejected
+            db.session.commit()
+        
+        return redirect(url_for('approve'))
 
-    users = User.query.all()
-    return render_template('approval.html', user=users) 
-
+    pending_users = User.query.filter_by(pending=True).all()
+    return render_template('approval.html', users=pending_users)
 
 # View Member Data - Only for Faculty
 @app.route('/view_members', methods=['GET'])
