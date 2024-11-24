@@ -60,9 +60,10 @@ def role_required(roles):
         return decorated_view
     return wrapper
 
+#Default home page when first opened up
 @app.route('/')
 def home():
-    return render_template('index.html')  # Rendered with index.html template
+    return render_template('index.html')  
 
 #User registration, once member has registered, POST request gets sent to libriarian for approval
 @app.route('/register', methods=['GET', 'POST'])
@@ -73,17 +74,14 @@ def register():
         role = request.form['role']
         name = request.form.get('name')
         student_id = request.form.get('student_id')
-
+        #Hashes password using PBKDF2 hashing algorithm 
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
         if User.query.filter_by(username=username).first():
             return 'User already exists!'
-
-        # Set pending status to False for librarians and admins
-        if role == 'student':
-            new_user = User(username=username, password=hashed_password, role=role, name=name, student_id=student_id, pending=True)
-        else:
-            new_user = User(username=username, password=hashed_password, role=role, name=name, pending=False)
+        
+        #Creates new user and sets them as unapproved (pending = True indicates the account approval is pending)
+        new_user = User(username=username, password=hashed_password, role=role, name=name, pending=True)
         
         db.session.add(new_user)
         db.session.commit()
@@ -99,24 +97,22 @@ def login():
         password = request.form['password']
 
         user = User.query.filter_by(username=username).first()
-
         if not user:
-            return 'Invalid credentials!'  # User does not exist
-
-        # If user exists, check password
+            return 'Invalid credentials!' 
+        #Checks hashed password in database
         if not check_password_hash(user.password, password):
-            return 'Invalid credentials!'  # Incorrect password
+            return 'Invalid credentials!'  
 
         # Check if the account is still pending approval
         if user.pending:
             return 'Account has not been verified by the librarian.'
 
-        # Successful login
+        # Successful login, routes user to dashbaord 
         session['username'] = username
         session['role'] = user.role
         return redirect(url_for('dashboard'))
-
-    return render_template('login.html')  # Rendered with updated login.html template
+ 
+    return render_template('login.html') 
 
 
 # Dashboard that contains list of actions users can do depending on their permissions 
@@ -127,15 +123,14 @@ def dashboard():
     
     role = session['role']
     books = Book.query.all()
-    
-    # Define feature access based on role
-    borrow = role == 'student'
+    #sets what functions are assigned to what roles 
+    borrow = role == ['student','librarian', 'faculty']
     can_manage_inventory = role in ['librarian', 'faculty']
     can_manage_members = role == 'librarian'
     can_view_members = role in ['faculty', 'librarian']
     can_issue_fines = role in ['faculty', 'librarian']
     approve = role == 'librarian'
-    return1 = role == 'student'
+    return1 = role == ['student','librarian', 'faculty']
 
     return render_template('dashboard.html', 
                            username=session['username'], 
@@ -149,14 +144,15 @@ def dashboard():
                            approve=approve,
                            return1 = return1) 
 
-# Search Catalog - Available to All
+# Search Catalog, all roles can access 
 @app.route('/search')
 def search_catalog():
     books = Book.query.all()
     return render_template('catalog.html', books=books)  # Rendered with updated catalog.html template
 
+#borrow books, any member of library can borrow a book 
 @app.route('/borrow', methods=['GET','POST'])
-@role_required(['student'])
+@role_required(['student','librarian', 'faculty'])
 def borrow():
     user = User.query.filter_by(username=session['username']).first()
     action = request.form.get('action')
@@ -172,9 +168,9 @@ def borrow():
             return redirect(url_for('dashboard'))
     return render_template('checkout.html', books = books)
 
-# Return Book - Only for Students
+# Return Book, any member of library can return their borrowed books 
 @app.route('/return1', methods=['GET','POST'])
-@role_required(['student'])
+@role_required(['student','librarian', 'faculty'])
 def return1():
     user = User.query.filter_by(username=session['username']).first()
     action = request.form.get('action')
@@ -197,16 +193,16 @@ def manage_inventory():
     if request.method == 'POST':
         title = request.form['title']
         author = request.form['author']
-        location = request.form['location']
-
+        location = request.form['location'] 
         new_book = Book(title=title, author=author, location=location)
         db.session.add(new_book)
         db.session.commit()
         return redirect(url_for('manage_inventory'))
 
     books = Book.query.all()
-    return render_template('inventory.html', books=books)  # Rendered with updated inventory.html template
+    return render_template('inventory.html', books=books) 
 
+#remove books from library inventory 
 @app.route('/remove_book/<int:book_id>', methods=['POST'])
 @role_required(['librarian'])
 def remove_book(book_id):
@@ -217,51 +213,55 @@ def remove_book(book_id):
         db.session.commit()
     return redirect(url_for('manage_inventory'))
 
-# Manage Membership - Only for Librarians
+# Manage Membership, reserved for librarians 
 @app.route('/manage_members', methods=['GET', 'POST'])
 @role_required(['librarian'])
 def manage_members():
     if request.method == 'POST':
+        #gets user that needs to be deleted and removes them from database 
         username_to_delete = request.form['username']
         user = User.query.filter_by(username=username_to_delete).first()
         if user:
-            BorrowRecord.query.filter_by(user_id=user.id).delete()  # Delete all borrow records for the user
+            # Delete all borrow records for the user
+            BorrowRecord.query.filter_by(user_id=user.id).delete()  
             db.session.delete(user)
             db.session.commit()
         return redirect(url_for('manage_members'))
 
     users = User.query.all()
-    return render_template('members.html', users=users)  # Rendered with updated members.html template
-#Approve new members - only for librarians
+    return render_template('members.html', users=users)  
 
-#It gives key error when I try to approve (brain blew up)
+#Approve new members - only for librarians, all accounts need to be approved when registered 
+#filters by users that need to be approved and has a button for librarian that either changes their pending status or removes them 
 @app.route('/approve', methods=['GET', 'POST'])
 @role_required(['librarian'])
 def approve():
     if request.method == 'POST':
         username = request.form['username']
-        action = request.form['action']  # 'approve' or 'reject'
+        action = request.form['action']  
         user = User.query.filter_by(username=username, pending=True).first()
         
         if user:
+            # Set 'pending' to False when approved
             if action == 'approve':
-                user.pending = False  # Set 'pending' to False when approved
+                user.pending = False  
+            # Delete user if rejected
             elif action == 'reject':
-                db.session.delete(user)  # Delete user if rejected
+                db.session.delete(user)  
             db.session.commit()
         
         return redirect(url_for('approve'))
-
     pending_users = User.query.filter_by(pending=True).all()
     return render_template('approval.html', users=pending_users)
 
-# View Member Data - Only for Faculty
+#view members of the library, can be access by faculty and librarians 
 @app.route('/view_members', methods=['GET'])
 @role_required(['faculty','librarian'])
 def view_members():
     users = User.query.all()
-    return render_template('view_members.html', users=users)  # Rendered with updated view_members.html template
+    return render_template('view_members.html', users=users)  
 
+#route for users to log out 
 @app.route('/logout')
 def logout():
     session.clear()
