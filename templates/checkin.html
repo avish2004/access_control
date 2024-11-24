@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='common_styles.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return Book</title>
+</head>
+<body>
+    <h1>Return Books</h1>
+    <ul>
+        {% for book in books %}
+            <li>{{ book.title }} by {{ book.author }} - Status: {{ 'Returned' if book.available else 'Not returned' }}</li>
+            
+            {% if not book.available %}
+                <form method="POST" action="{{ url_for('return1') }}">
+                    <input type="hidden" name="book_id" value="{{ book.id }}">
+                    <input type="hidden" name="action" value="return">
+                    <button type="submit">Return</button>
+                </form>
+            {% endif %}
+        {% endfor %}
+    </ul>
+    
+    <a href="/dashboard">Back to Dashboard</a>
+</body>
+</html>
+

@@ -36,18 +36,30 @@
                 </div>
             </div>
 
-            {% if can_borrow_books %}
+            {% if borrow %} 
             <!-- Student Features -->
             <div class="col-md-6 mb-3">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">Borrow Books</h5>
                         <p class="card-text">View available books and borrow them.</p>
-                        <a href="/checkout" class="btn btn-success">View Available Books</a>
+                        <a href="/borrow"class="btn btn-primary">View Available Books</a>
                     </div>
                 </div>
             </div>
             {% endif %}
+            {% if return1 %} 
+            <!-- Student Features -->
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Return Books</h5>
+                        <p class="card-text">Return borrowed books</p>
+                        <a href="/return1"class="btn btn-primary">View Borrowed Books</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}  
 
             {% if can_manage_inventory %}
             <!-- Librarian Features -->

@@ -5,16 +5,23 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book Available for Borrow</title>
+    <title>Book Catalog</title>
 </head>
 <body>
-    <h1>Book Catalog</h1>
+    <h1>Borrow Book</h1>
     <ul>
-        {% for book in books %}
-            <li>{{ book.title }} by {{ book.author }} - Available: {{ 'Yes' if book.available else 'No' }}</li>
-            <button type="submit" name="username" value="{{ user.username }}">Approve</button>
-        {% endfor %}
+            {% for books in books %}
+            <li>{{ books.title }} by {{ books.author }} - Available: {{ 'Yes' if books.available else 'No' }}</li>
+            <form method="POST" action="{{ url_for('borrow') }}">
+                <input type="hidden" name="book_id" value="{{ books.id }}">
+                {% if books.available%}
+                <form method="POST" action="{{ url_for('borrow') }}">   
+                    <button type="submit" name="action" value="borrow">Borrow</button>
+                </form>
+                {% endif %}
+            {% endfor %}
     </ul>
+    
     <a href="/dashboard">Back to Dashboard</a>
 </body>
 </html>

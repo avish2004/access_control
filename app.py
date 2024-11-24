@@ -2,6 +2,7 @@ from flask import Flask, request, redirect, url_for, render_template, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 import datetime
+from datetime import timedelta
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -23,19 +24,22 @@ class User(db.Model):
     pending = db.Column(db.Boolean, default = True)  
 
 class Book(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
     title = db.Column(db.String(150), nullable=False)
     author = db.Column(db.String(150), nullable=False)
     location = db.Column(db.String(150), nullable=False)
     available = db.Column(db.Boolean, default=True)
-    time_added = db.Column(db.DateTime, default=datetime.datetime.now)
+    time_added = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 class BorrowRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=False)
-    book_id = db.Column(db.Integer, nullable=False)
-    borrow_date = db.Column(db.DateTime, default=datetime.datetime.now)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    book_id = db.Column(db.Integer, db.ForeignKey('book.id'), nullable=False)
+    borrow_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     return_date = db.Column(db.DateTime, nullable=True)
+    restore = db.Column(db.Boolean, default=False)
+    user = db.relationship('User', backref='borrow_records', lazy=True)
+    book = db.relationship('Book', backref='borrow_records', lazy=True)
 
 # Initialize the database
 with app.app_context():
@@ -75,17 +79,17 @@ def register():
         if User.query.filter_by(username=username).first():
             return 'User already exists!'
 
+        # Set pending status to False for librarians and admins
         if role == 'student':
-            new_user = User(username=username, password=hashed_password, role=role, name=name, student_id=student_id)
+            new_user = User(username=username, password=hashed_password, role=role, name=name, student_id=student_id, pending=True)
         else:
-            new_user = User(username=username, password=hashed_password, role=role, name=name)
+            new_user = User(username=username, password=hashed_password, role=role, name=name, pending=False)
+        
         db.session.add(new_user)
         db.session.commit()
-
-        return 'Registration submitted for approval'
+        print('Registration successful. Please wait for approval if required.')
         return redirect(url_for('login'))
-    return render_template('register.html')  # Rendered with updated register.html template
-
+    return render_template('register.html')
 
 #User login, if login request is succesful, routes user to dashboard
 @app.route('/login', methods=['GET', 'POST'])
@@ -95,20 +99,27 @@ def login():
         password = request.form['password']
 
         user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password, password) and user.pending == 1:
-            session['username'] = username
-            session['role'] = user.role
 
-            # Redirect to dashboard after successful login
-            return redirect(url_for('dashboard'))
-        elif user.pending == 0:
-            return 'Account has not been verfied by the librarian'
-        else:
-            return 'Invalid credentials!'
+        if not user:
+            return 'Invalid credentials!'  # User does not exist
+
+        # If user exists, check password
+        if not check_password_hash(user.password, password):
+            return 'Invalid credentials!'  # Incorrect password
+
+        # Check if the account is still pending approval
+        if user.pending:
+            return 'Account has not been verified by the librarian.'
+
+        # Successful login
+        session['username'] = username
+        session['role'] = user.role
+        return redirect(url_for('dashboard'))
 
     return render_template('login.html')  # Rendered with updated login.html template
 
-#Dashboard that contains list of actions users can do depending on their permissions 
+
+# Dashboard that contains list of actions users can do depending on their permissions 
 @app.route('/dashboard')
 def dashboard():
     if 'username' not in session:
@@ -118,21 +129,25 @@ def dashboard():
     books = Book.query.all()
     
     # Define feature access based on role
-    can_borrow_books = role == 'student'
-    can_manage_inventory = role == 'librarian','faculty'
+    borrow = role == 'student'
+    can_manage_inventory = role in ['librarian', 'faculty']
     can_manage_members = role == 'librarian'
-    can_view_members = role == 'faculty'
-    can_issue_fines = role == 'faculty'
+    can_view_members = role in ['faculty', 'librarian']
+    can_issue_fines = role in ['faculty', 'librarian']
     approve = role == 'librarian'
+    return1 = role == 'student'
+
     return render_template('dashboard.html', 
                            username=session['username'], 
                            role=role, 
                            books=books, 
-                           can_borrow_books=can_borrow_books,
+                           borrow=borrow,
                            can_manage_inventory=can_manage_inventory,
                            can_manage_members=can_manage_members,
                            can_view_members=can_view_members,
-                           approve = approve)  # Rendered with updated dashboard.html template
+                           can_issue_fines=can_issue_fines,
+                           approve=approve,
+                           return1 = return1) 
 
 # Search Catalog - Available to All
 @app.route('/search')
@@ -140,38 +155,40 @@ def search_catalog():
     books = Book.query.all()
     return render_template('catalog.html', books=books)  # Rendered with updated catalog.html template
 
-# Borrow Book - Only for Students
-@app.route('/borrow/<int:book_id>', methods=['POST'])
+@app.route('/borrow', methods=['GET','POST'])
 @role_required(['student'])
-def borrow(book_id):
+def borrow():
     user = User.query.filter_by(username=session['username']).first()
+    action = request.form.get('action')
+    book_id = request.form.get('book_id')
     book = Book.query.get(book_id)
-
-    if book and book.available:
-        book.available = False
-        new_borrow_record = BorrowRecord(user_id=user.id, book_id=book.id)
-        db.session.add(new_borrow_record)
-        db.session.commit()
-        return redirect(url_for('checkout'))
-
-    return 'Book not available!'
-    return render_template('checkout.html', books=books)  # Rendered with updated inventory.html template
+    books = Book.query.all()
+    if request.method=='POST' and action == 'borrow':
+        if book and book.available: 
+            book.available = False
+            new_borrow_record = BorrowRecord(user_id=user.id, book_id=book.id)
+            db.session.add(new_borrow_record)
+            db.session.commit()
+            return redirect(url_for('dashboard'))
+    return render_template('checkout.html', books = books)
 
 # Return Book - Only for Students
-@app.route('/return/<int:book_id>', methods=['POST'])
+@app.route('/return1', methods=['GET','POST'])
 @role_required(['student'])
-def return_book(book_id):
+def return1():
     user = User.query.filter_by(username=session['username']).first()
-    borrow_record = BorrowRecord.query.filter_by(user_id=user.id, book_id=book_id, return_date=None).first()
+    action = request.form.get('action')
+    book_id = request.form.get('book_id')
     book = Book.query.get(book_id)
-
-    if borrow_record and book:
-        borrow_record.return_date = datetime.datetime.now()
-        book.available = True
-        db.session.commit()
-        return redirect(url_for('dashboard'))
-
-    return 'Book not borrowed by user!'
+    if request.method=='POST' and action == 'return':
+        if book and not book.available: 
+            book.available = True
+            BorrowRecord.query.filter_by(book_id=book.id, user_id = user.id).delete()
+            db.session.commit()
+            return redirect(url_for('dashboard'))
+    
+    books = Book.query.all()
+    return render_template('checkin.html', books = books)
 
 # Manage Inventory - Only for Librarians
 @app.route('/inventory', methods=['GET', 'POST'])
@@ -222,20 +239,25 @@ def manage_members():
 @role_required(['librarian'])
 def approve():
     if request.method == 'POST':
-        user_to_approve = request.form['username']  # Get the username from the form
-        user = User.query.filter_by(username=user_to_approve).first()  # Query by the username
+        username = request.form['username']
+        action = request.form['action']  # 'approve' or 'reject'
+        user = User.query.filter_by(username=username, pending=True).first()
+        
         if user:
-            user.pending = True  # Set 'pending' to True when approved
-            db.session.commit()  # Commit the change to the database
-        return redirect(url_for('approve'))  # Redirect to reload the page
+            if action == 'approve':
+                user.pending = False  # Set 'pending' to False when approved
+            elif action == 'reject':
+                db.session.delete(user)  # Delete user if rejected
+            db.session.commit()
+        
+        return redirect(url_for('approve'))
 
-    users = User.query.all()
-    return render_template('approval.html', user=users) 
-
+    pending_users = User.query.filter_by(pending=True).all()
+    return render_template('approval.html', users=pending_users)
 
 # View Member Data - Only for Faculty
 @app.route('/view_members', methods=['GET'])
-@role_required(['faculty'])
+@role_required(['faculty','librarian'])
 def view_members():
     users = User.query.all()
     return render_template('view_members.html', users=users)  # Rendered with updated view_members.html template
